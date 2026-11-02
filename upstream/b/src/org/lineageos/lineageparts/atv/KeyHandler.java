@@ -1,0 +1,102 @@
+/*
+ * SPDX-FileCopyrightText: The LineageOS Project
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package org.lineageos.lineageparts.atv;
+
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.KeyEvent;
+
+import com.android.internal.os.DeviceKeyHandler;
+
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+public class KeyHandler implements DeviceKeyHandler {
+    private static final String TAG = KeyHandler.class.getSimpleName();
+    private static Map<Integer, String> KEYMAP;
+
+    private final Context mContext;
+
+    public KeyHandler(Context context) {
+        mContext = context;
+
+        int[] keycodes = mContext.getResources().getIntArray(
+                org.lineageos.platform.internal.R.array.keyhandler_keycodes);
+        String[] packages = mContext.getResources().getStringArray(
+                org.lineageos.platform.internal.R.array.keyhandler_packages);
+
+        KEYMAP = IntStream.range(0, keycodes.length).boxed()
+                .collect(Collectors.toMap(i -> keycodes[i], i -> packages[i]));
+    }
+
+    public KeyEvent handleKeyEvent(KeyEvent event) {
+        String targetName = KEYMAP.get(event.getKeyCode());
+        if (targetName == null || !hasSetupCompleted()) {
+            return event;
+        }
+
+        // Nothing to launch: leave the key alone so apps receive both DOWN and UP
+        Intent launchIntent = resolveTarget(targetName);
+        if (launchIntent == null) {
+            return event;
+        }
+
+        // Consume DOWN as well as UP, so apps never see a DOWN without its UP
+        if (event.getAction() == KeyEvent.ACTION_UP) {
+            mContext.startActivity(launchIntent);
+        }
+        return null;
+    }
+
+    private boolean hasSetupCompleted() {
+        return Settings.Secure.getInt(mContext.getContentResolver(),
+                Settings.Secure.TV_USER_SETUP_COMPLETE, 0) != 0;
+    }
+
+    private Intent resolveTarget(String targetName) {
+        PackageManager pm = mContext.getPackageManager();
+
+        ComponentName component = ComponentName.unflattenFromString(targetName);
+        Intent launchIntent = null;
+
+        // Explicit components avoid package visibility and unusual intent-filter issues
+        if (component != null) {
+            launchIntent = new Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    .setComponent(component)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        } else {
+            // First try to look the name up as a package
+            launchIntent = pm.getLaunchIntentForPackage(targetName);
+
+            // TV-only apps may expose a leanback launcher activity without a regular one
+            if (launchIntent == null) {
+                launchIntent = pm.getLeanbackLaunchIntentForPackage(targetName);
+            }
+        }
+
+        // If it isn't an installed package or component, try as an intent
+        if (launchIntent == null) {
+            launchIntent = new Intent(targetName);
+            launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            launchIntent.putExtra("no_input_mode", true);
+
+            if (launchIntent.resolveActivity(pm) == null) {
+                launchIntent = null;
+            }
+        }
+
+        if (launchIntent == null) {
+            Log.d(TAG, "Not handling " + targetName + ": package/intent not found.");
+        }
+        return launchIntent;
+    }
+}
