@@ -62,6 +62,11 @@ class Prefs(context: Context) {
         get() = raw.getBoolean(TV_POWER, false)
         set(value) = raw.edit().putBoolean(TV_POWER, value).apply()
 
+    /** Use the single power-toggle code instead of separate on and off codes. */
+    var tvPowerToggle: Boolean
+        get() = raw.getBoolean(TV_POWER_TOGGLE, false)
+        set(value) = raw.edit().putBoolean(TV_POWER_TOGGLE, value).apply()
+
     /** Bluetooth address of the remote that fires TV power, or null for any connected one. */
     var tvPowerRemote: String?
         get() = raw.getString(TV_POWER_REMOTE, null)
@@ -104,6 +109,7 @@ class Prefs(context: Context) {
         const val LAST_RESULT = "last_result"
         const val TV_POWER = "tv_power"
         const val TV_POWER_REMOTE = "tv_power_remote"
+        const val TV_POWER_TOGGLE = "tv_power_toggle"
         private const val OLD_KEY_CODE = "key_code"
     }
 }

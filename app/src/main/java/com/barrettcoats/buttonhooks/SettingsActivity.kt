@@ -75,7 +75,12 @@ class SettingsActivity : Activity() {
                 requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_BT)
                 return@setOnClickListener
             }
-            prefs.tvPower = !prefs.tvPower
+            // Cycles: off → on/off codes → toggle code → off.
+            when {
+                !prefs.tvPower -> { prefs.tvPowerToggle = false; prefs.tvPower = true }
+                !prefs.tvPowerToggle -> prefs.tvPowerToggle = true
+                else -> { prefs.tvPower = false; prefs.tvPowerToggle = false }
+            }
             showTvPower()
         }
 
@@ -84,8 +89,21 @@ class SettingsActivity : Activity() {
                 requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_BT)
                 return@setOnClickListener
             }
-            RemoteIr.emit(this, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote) { result ->
-                Toast.makeText(this, "TV power: $result", Toast.LENGTH_SHORT).show()
+            val remote = prefs.tvPowerRemote
+            if (prefs.tvPowerToggle) {
+                RemoteIr.emit(this, RemoteIr.SLOT_POWER_TOGGLE, remote) { result ->
+                    Toast.makeText(this, "TV power toggle: $result", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                RemoteIr.emit(this, RemoteIr.SLOT_POWER_OFF, remote) { off ->
+                    Toast.makeText(this, "TV off: $off", Toast.LENGTH_SHORT).show()
+                    // Give the TV time to finish switching off before it'll accept ON.
+                    tvPower.postDelayed({
+                        RemoteIr.emit(this, RemoteIr.SLOT_POWER_ON, remote) { on ->
+                            Toast.makeText(this, "TV on: $on", Toast.LENGTH_SHORT).show()
+                        }
+                    }, 8000)
+                }
             }
         }
 
@@ -209,7 +227,13 @@ class SettingsActivity : Activity() {
     }
 
     private fun showTvPower() {
-        tvPower.setText(if (prefs.tvPower) R.string.tv_power_on else R.string.tv_power_off)
+        tvPower.setText(
+            when {
+                !prefs.tvPower -> R.string.tv_power_off
+                prefs.tvPowerToggle -> R.string.tv_power_toggle
+                else -> R.string.tv_power_on
+            }
+        )
         val chosen = RemoteIr.pairedRemotes(this).firstOrNull { it.address == prefs.tvPowerRemote }
         tvPowerRemote.text = if (chosen == null) getString(R.string.tv_power_remote_any)
         else getString(R.string.tv_power_remote_one, RemoteIr.label(chosen))

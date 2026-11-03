@@ -36,11 +36,20 @@ class ButtonHookService : AccessibilityService() {
         }
     }
 
-    /** Sleep/wake of the Shield toggles the TV through the remote's stored IR power code. */
+    /**
+     * Sleep/wake of the Shield turns the TV off/on through the remote's stored IR power codes:
+     * the discrete OFF/ON codes three times each, like NVIDIA's firmware, or the toggle once.
+     */
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.i(TAG, "${intent.action}: toggling TV power")
-            RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote)
+            val on = intent.action == Intent.ACTION_SCREEN_ON
+            val toggle = prefs.tvPowerToggle
+            Log.i(TAG, "${intent.action}: TV power ${if (toggle) "toggle" else if (on) "on" else "off"}")
+            when {
+                toggle -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote)
+                on -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_ON, prefs.tvPowerRemote, times = 3)
+                else -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_OFF, prefs.tvPowerRemote, times = 3)
+            }
         }
     }
     private var screenReceiverRegistered = false

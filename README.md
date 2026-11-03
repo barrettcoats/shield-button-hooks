@@ -19,13 +19,13 @@ A fix is drafted in `upstream/` and was tested on a Shield TV Pro 2019: it passe
 
 ## TV power over the remote's IR (Shield Remote 2019)
 
-On NVIDIA's firmware, the Shield turns the TV on and off by IR: when the Shield sleeps or wakes, it tells the remote over Bluetooth to fire the TV power code stored on the remote. LineageOS has nothing that does that. With **TV power: follows the Shield** turned on, Button Hooks does it instead: on screen off and screen on, it fires the remote's stored **power toggle** code.
+On NVIDIA's firmware, the Shield turns the TV on and off by IR: when the Shield sleeps or wakes, it tells the remote over Bluetooth to fire the TV power code stored on the remote. LineageOS has nothing that does that. With **TV power: follows the Shield** turned on, Button Hooks does it instead. When the Shield sleeps it fires the remote's stored **power off** code, and when it wakes it fires **power on**, three times each like NVIDIA's firmware. Repeating a discrete code is harmless, and it covers a missed IR flash. For remotes that only have a **toggle** stored, a second setting fires that once instead.
 
 Requirements and limits:
 
 - **The 2019 Shield Remote** (Bluetooth name `NVIDIA SHIELD Remote`). The 2017 remote uses a different link and isn't supported.
 - **The power code has to be on the remote already.** Set it up on NVIDIA's firmware **before** flashing LineageOS: Settings → Display & Sound → Power control (and Volume control → IR). The codes are stored on the remote, so they survive the flash and re-pairing. Writing new codes from LineageOS isn't implemented yet (the protocol is worked out in `shield-remote-ir/NOTES.md`).
-- **It's a toggle**, as on stock: if the TV and Shield get out of step, fix it once with the TV's own button.
+- With the toggle setting, if the TV and Shield get out of step, fix it once with the TV's own button. The on/off codes can't get out of step.
 - **Several remotes**: only one may fire, because two would toggle the TV twice. By default it uses the first connected remote. With two paired, use **Fires from** to pick the one kept with this TV, identified by the end of its Bluetooth address (Settings → Remotes & accessories shows it). Android doesn't tell apps which Bluetooth remote sent a key (the hidden `InputDevice.getBluetoothAddress()` is blocked for apps), so it can't follow whichever remote you last pressed.
 - Volume isn't involved. If the remote already sends IR volume, lock the Shield's HDMI output at full volume so Bluetooth volume doesn't stack on top: `adb shell settings put system AudioService_DeviceVolumeBehavior_hdmi 1`, then reboot.
 
@@ -33,9 +33,9 @@ Setup on a new Shield, after the steps under *Build and install*:
 
     adb shell pm grant com.barrettcoats.buttonhooks android.permission.BLUETOOTH_CONNECT
 
-Then open Button Hooks, set **TV power** to *follows the Shield*, and try **Toggle TV power now**.
+Then open Button Hooks, set **TV power** to *follows the Shield (on/off codes)*, and try **Test: TV off, then on**. If the TV only turns off and never comes back on, the remote has only a toggle stored: switch to *(toggle code)*.
 
-How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be0483c18`. 18-byte frames `[command, transactionId, slot, offset, data…]` are written to `…2001`, and the replies arrive as notifications on `…2000`. Command 44 is *emit*, with data[0] = slot (1 = power toggle, 2/3 = volume up/down, 11 = mute). See `RemoteIr.kt`.
+How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be0483c18`. 18-byte frames `[command, transactionId, slot, offset, data…]` are written to `…2001`, and the replies arrive as notifications on `…2000`. Command 44 is *emit*, with data[0] = slot (0 = power off, 1 = power toggle, 5 = power on, 2/3 = volume up/down, 11 = mute). See `RemoteIr.kt`.
 
 ## How it works
 

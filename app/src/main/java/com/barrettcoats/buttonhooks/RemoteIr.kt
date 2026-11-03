@@ -38,7 +38,15 @@ object RemoteIr {
     private const val CMD_EMIT: Byte = 44
     private const val TIMEOUT_MS = 5000L
 
+    const val SLOT_POWER_OFF = 0
     const val SLOT_POWER_TOGGLE = 1
+    const val SLOT_POWER_ON = 5
+
+    /** Gap between repeats; NVIDIA spaces its power emits by about 300 ms. */
+    private const val REPEAT_GAP_MS = 300L
+
+    /** Ends the emit in progress, so a quick sleep-then-wake doesn't interleave two sessions. */
+    private var cancelCurrent: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var tid: Byte = 0
@@ -59,9 +67,17 @@ object RemoteIr {
     /**
      * Fires [slot] on one paired Shield remote: [preferred] (a Bluetooth address) if it's paired,
      * otherwise the first connected one. Only ever one remote, because firing a toggle from two
-     * would cancel out. [onResult] gets a short status on the main thread.
+     * would cancel out. [times] > 1 repeats it, as NVIDIA does for discrete on/off codes (harmless
+     * to repeat, and it covers a missed IR flash). [onResult] gets a short status on the main thread.
      */
-    fun emit(context: Context, slot: Int, preferred: String? = null, onResult: (String) -> Unit = {}) {
+    fun emit(
+        context: Context,
+        slot: Int,
+        preferred: String? = null,
+        times: Int = 1,
+        onResult: (String) -> Unit = {},
+    ) {
+        cancelCurrent?.invoke()
         val app = context.applicationContext
         if (!hasPermission(app)) return onResult("no Bluetooth permission")
         val remotes = pairedRemotes(app)
@@ -79,24 +95,26 @@ object RemoteIr {
 
         var gatt: BluetoothGatt? = null
         var finished = false
+        val token = Any()
         fun finish(result: String) {
             main.post {
                 if (finished) return@post
                 finished = true
+                main.removeCallbacksAndMessages(token)
                 gatt?.close()
                 if (wake.isHeld) wake.release()
-                Log.i(TAG, "IR emit slot $slot via ${label(remote)}: $result")
+                Log.i(TAG, "IR emit slot $slot x$times via ${label(remote)}: $result")
                 onResult(result)
             }
         }
-        main.postDelayed({ finish("timed out") }, TIMEOUT_MS)
+        cancelCurrent = { finish("superseded") }
+        main.postDelayed({ finish("timed out") }, token, TIMEOUT_MS)
 
         val frame = ByteArray(18).also {
             it[0] = CMD_EMIT
-            tid = (tid + 1).toByte()
-            it[1] = tid
             it[4] = slot.toByte()
         }
+        var sent = 0
 
         gatt = remote.connectGatt(app, false, object : BluetoothGattCallback() {
             private var out: BluetoothGattCharacteristic? = null
@@ -121,13 +139,19 @@ object RemoteIr {
             override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) = send(g)
 
             private fun send(g: BluetoothGatt) {
+                tid = (tid + 1).toByte()
+                frame[1] = tid
+                sent++
                 g.writeCharacteristic(out!!, frame, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
             }
 
             override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray) {
-                if (value.size >= 2 && value[0] == CMD_EMIT && value[1] == frame[1]) {
-                    val status = if (value.size >= 4) (value[2].toInt() and 0xff) or ((value[3].toInt() and 0xff) shl 8) else -1
-                    finish(if (status == 0) "ok" else "remote error $status")
+                if (value.size < 2 || value[0] != CMD_EMIT || value[1] != frame[1]) return
+                val status = if (value.size >= 4) (value[2].toInt() and 0xff) or ((value[3].toInt() and 0xff) shl 8) else -1
+                when {
+                    status != 0 -> finish("remote error $status")
+                    sent < times -> main.postDelayed({ if (!finished) send(g) }, token, REPEAT_GAP_MS)
+                    else -> finish("ok")
                 }
             }
         }, BluetoothDevice.TRANSPORT_LE)
