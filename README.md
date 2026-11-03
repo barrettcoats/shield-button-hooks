@@ -6,6 +6,7 @@ An Android TV app that takes over remote buttons you choose. It stops a button's
 - **Navigation**: Back, Home, Recent apps, Notifications, Quick settings, D-pad (D-pad needs Android 13+)
 - **Media key**: play/pause, play, pause, stop, next, previous, fast-forward, rewind
 - **Open app**: any installed app
+- **TV remote (IR)**: fire a code already stored on the Shield Remote (2019): TV input, power toggle/on/off, mute. Codes the remote doesn't have stored fail with "remote error 2048"
 - **Nothing**: just disable the button
 
 A new install starts with no buttons; use **Add button** and press the one you want.
@@ -54,7 +55,7 @@ How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be
   - **hold** fires while the button is still down, after *hold ms* (default 500)
   - **double** fires on the second press, if it comes within *double ms* (default 300) of the first release
   - **single** fires *double ms* after release, or immediately if no double press URL is set
-- `LocalActions` runs the non-webhook actions: `performGlobalAction` for navigation, `AudioManager.dispatchMediaKeyEvent` for media keys (they go to the app that last played media), and the app's TV launch intent for Open app.
+- `LocalActions` runs the non-webhook actions: `performGlobalAction` for navigation, `AudioManager.dispatchMediaKeyEvent` for media keys (they go to the app that last played media), the app's TV launch intent for Open app, and `RemoteIr` (the same Bluetooth emit as TV power) for TV remote codes.
 - `HttpSender` sends the request on a background thread and logs the method, URL and result (never headers) to logcat under the tag `ButtonHooks`.
 - `SettingsActivity` is a D-pad-friendly screen for the three URLs, the timing, learning a new button, and test buttons.
 

@@ -15,7 +15,8 @@ enum class ActionType(val id: String, val label: String) {
     NOTHING("nothing", "Nothing"),
     NAV("nav", "Navigation"),
     MEDIA("media", "Media key"),
-    APP("app", "Open app");
+    APP("app", "Open app"),
+    IR("ir", "TV remote (IR)");
 
     fun next(): ActionType = entries[(ordinal + 1) % entries.size]
 
@@ -30,7 +31,8 @@ data class Choice(val id: String, val label: String)
 /**
  * Actions that run on the device instead of over HTTP. Android doesn't let apps inject arbitrary
  * key presses, so these are limited to what an accessibility service can do: global navigation
- * actions, media keys through [AudioManager], and opening apps.
+ * actions, media keys through [AudioManager], and opening apps. [ActionType.IR] fires an IR code
+ * already stored on the Shield Remote (2019) through [RemoteIr].
  */
 object LocalActions {
     /** Navigation choices and their AccessibilityService global action, with the minimum SDK. */
@@ -60,9 +62,24 @@ object LocalActions {
         Choice("rewind", "Rewind") to KeyEvent.KEYCODE_MEDIA_REWIND,
     )
 
+    /** IR choices: remote slot and how many times to send it (discrete power codes repeat, as NVIDIA does). */
+    private data class Ir(val choice: Choice, val slot: Int, val times: Int = 1)
+
+    private val IR = listOf(
+        Ir(Choice("input_next", "Input: next"), RemoteIr.SLOT_INPUT_NEXT),
+        Ir(Choice("input_scroll", "Input: scroll"), RemoteIr.SLOT_INPUT_SCROLL),
+        Ir(Choice("input_scroll_up", "Input: scroll up"), RemoteIr.SLOT_INPUT_SCROLL_UP),
+        Ir(Choice("power_toggle", "Power toggle"), RemoteIr.SLOT_POWER_TOGGLE),
+        Ir(Choice("power_on", "Power on"), RemoteIr.SLOT_POWER_ON, 3),
+        Ir(Choice("power_off", "Power off"), RemoteIr.SLOT_POWER_OFF, 3),
+        Ir(Choice("mute", "Mute"), RemoteIr.SLOT_MUTE),
+    )
+
     fun navChoices(): List<Choice> = NAV.filter { Build.VERSION.SDK_INT >= it.minSdk }.map { it.choice }
 
     fun mediaChoices(): List<Choice> = MEDIA.map { it.first }
+
+    fun irChoices(): List<Choice> = IR.map { it.choice }
 
     /** Launchable apps (TV launcher entries first), sorted by name. */
     fun appChoices(context: Context): List<Choice> {
@@ -81,6 +98,7 @@ object LocalActions {
         ActionType.NAV -> navChoices()
         ActionType.MEDIA -> mediaChoices()
         ActionType.APP -> appChoices(context)
+        ActionType.IR -> irChoices()
         else -> emptyList()
     }
 
@@ -91,6 +109,7 @@ object LocalActions {
         ActionType.NAV -> NAV.find { it.choice.id == action.target }?.choice?.label ?: "—"
         ActionType.MEDIA -> MEDIA.find { it.first.id == action.target }?.first?.label ?: "—"
         ActionType.APP -> if (action.target.isEmpty()) "—" else "Open " + appLabel(context, action.target)
+        ActionType.IR -> IR.find { it.choice.id == action.target }?.let { "TV " + it.choice.label } ?: "—"
     }
 
     private fun appLabel(context: Context, pkg: String): String = try {
@@ -102,7 +121,8 @@ object LocalActions {
 
     /**
      * Runs a non-webhook [action] from [service]. Returns a short result such as "ok" or an error.
-     * Navigation needs the service itself; the others only need a context.
+     * Navigation needs the service itself; the others only need a context. IR is sent in the
+     * background, so "ok" only means it was started; the outcome goes to [Prefs.lastResult].
      */
     fun run(context: Context, service: AccessibilityService?, action: Action): String = when (action.type) {
         ActionType.NOTHING, ActionType.WEBHOOK -> "ok"
@@ -131,6 +151,18 @@ object LocalActions {
                 "app not installed"
             } else {
                 context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                "ok"
+            }
+        }
+        ActionType.IR -> {
+            val ir = IR.find { it.choice.id == action.target } ?: return "no code chosen"
+            if (!RemoteIr.hasPermission(context)) {
+                "no Bluetooth permission"
+            } else {
+                val prefs = Prefs(context)
+                RemoteIr.emit(context, ir.slot, prefs.tvPowerRemote, ir.times) { result ->
+                    prefs.lastResult = "TV ${ir.choice.label}: $result"
+                }
                 "ok"
             }
         }

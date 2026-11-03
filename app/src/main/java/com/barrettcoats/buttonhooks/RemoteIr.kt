@@ -49,7 +49,11 @@ object RemoteIr {
 
     const val SLOT_POWER_OFF = 0
     const val SLOT_POWER_TOGGLE = 1
+    const val SLOT_INPUT_SCROLL = 4
     const val SLOT_POWER_ON = 5
+    const val SLOT_MUTE = 11
+    const val SLOT_INPUT_NEXT = 13
+    const val SLOT_INPUT_SCROLL_UP = 14
 
     /** Gap between repeats; NVIDIA spaces its power emits by about 300 ms. */
     private const val REPEAT_GAP_MS = 300L
