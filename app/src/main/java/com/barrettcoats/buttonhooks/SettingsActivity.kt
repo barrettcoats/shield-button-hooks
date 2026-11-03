@@ -211,17 +211,14 @@ class SettingsActivity : Activity() {
 
     private fun summary(hook: Hook): String {
         val downOnly = hook.keyCode in LineageKeyHandler.upSwallowedKeys(this)
-        val parts = Gesture.entries
-            .filterNot { it == Gesture.HOLD && downOnly }
-            .map { gesture ->
-                val action = hook.action(gesture)
-                "${gesture.label}: " + when {
-                    action.url.isEmpty() -> "—"
-                    action.name.isNotEmpty() -> action.name
-                    else -> "✓"
-                }
-            }
-        return "${hook.keyName} (${hook.keyCode})   " + parts.joinToString("   ")
+        val gestures = Gesture.entries.filterNot { it == Gesture.HOLD && downOnly }
+        val key = "${hook.keyName} (${hook.keyCode})   "
+        if (gestures.none { hook.action(it).active }) return key + getString(R.string.disabled_summary)
+        val parts = gestures.map { gesture ->
+            val action = hook.action(gesture)
+            "${gesture.label}: " + if (action.active && action.name.isNotEmpty()) action.name else LocalActions.describe(this, action)
+        }
+        return key + parts.joinToString("   ")
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

@@ -4,13 +4,30 @@ import android.view.KeyEvent
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** What one gesture does: a user-facing name and the HTTP request to send. */
+/**
+ * What one gesture does: a user-facing name, and either an HTTP request ([ActionType.WEBHOOK]) or
+ * a local action whose [target] is a navigation id, media key id or package name.
+ */
 data class Action(
     val name: String = "",
     val url: String = "",
     val method: String = "GET",
     val body: String = "",
+    val type: ActionType = ActionType.WEBHOOK,
+    val target: String = "",
 ) {
+    /** Whether this gesture does anything. [ActionType.NOTHING] still blocks the button. */
+    val active: Boolean
+        get() = when (type) {
+            ActionType.WEBHOOK -> url.isNotEmpty()
+            ActionType.NOTHING -> false
+            else -> target.isNotEmpty()
+        }
+
+    /** Whether anything is saved for it at all. */
+    val isEmpty: Boolean
+        get() = name.isEmpty() && url.isEmpty() && body.isEmpty() && type == ActionType.WEBHOOK
+
     companion object {
         val METHODS = listOf("GET", "POST", "PUT", "DELETE")
     }
@@ -49,6 +66,8 @@ data class Hook(
                     put("url", action.url)
                     if (action.method != "GET") put("method", action.method)
                     if (action.body.isNotEmpty()) put("body", action.body)
+                    if (action.type != ActionType.WEBHOOK) put("type", action.type.id)
+                    if (action.target.isNotEmpty()) put("target", action.target)
                 })
             }
         })
@@ -64,6 +83,8 @@ data class Hook(
                         it.optString("url"),
                         it.optString("method", "GET").ifEmpty { "GET" },
                         it.optString("body"),
+                        ActionType.from(it.optString("type")),
+                        it.optString("target"),
                     )
                 }
             }.toMap()

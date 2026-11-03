@@ -69,6 +69,7 @@ class ButtonHookService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
+        instance = this
         prefs = Prefs(this)
         overlay = FeedbackOverlay(this)
         reloadHooks()
@@ -88,7 +89,7 @@ class ButtonHookService : AccessibilityService() {
             handler = handler,
             doubleMs = { prefs.doubleMs },
             holdMs = { prefs.holdMs },
-            doubleEnabled = { hooks[keyCode]?.action(Gesture.DOUBLE)?.url?.isNotEmpty() == true },
+            doubleEnabled = { hooks[keyCode]?.action(Gesture.DOUBLE)?.active == true },
             downOnly = { keyCode in LineageKeyHandler.upSwallowedKeys(this) },
             onGesture = { gesture -> fire(keyCode, gesture) },
         )
@@ -135,9 +136,19 @@ class ButtonHookService : AccessibilityService() {
 
     private fun fire(keyCode: Int, gesture: Gesture) {
         val hook = hooks[keyCode] ?: return
-        val name = hook.actionName(gesture)
-        if (hook.action(gesture).url.isEmpty()) {
-            Log.i(TAG, "${hook.title} ${gesture.id}: no URL set")
+        val action = hook.action(gesture)
+        val name = action.name.ifEmpty { LocalActions.describe(this, action) }
+        if (!action.active) {
+            Log.i(TAG, "${hook.title} ${gesture.id}: does nothing")
+            return
+        }
+        if (action.type != ActionType.WEBHOOK) {
+            val result = LocalActions.run(this, this, action)
+            Log.i(TAG, "${hook.title} ${gesture.id}: $name -> $result")
+            when {
+                result != "ok" && prefs.badgeMode != BadgeMode.OFF -> overlay.show("✗ $name: $result", error = true)
+                result == "ok" && prefs.badgeMode == BadgeMode.ALL -> overlay.show("✓ $name")
+            }
             return
         }
         if (prefs.badgeMode == BadgeMode.ALL) overlay.show("$name…")
@@ -159,6 +170,7 @@ class ButtonHookService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        if (instance === this) instance = null
         if (::prefs.isInitialized) prefs.raw.unregisterOnSharedPreferenceChangeListener(prefListener)
         if (::overlay.isInitialized) overlay.hide()
         if (screenReceiverRegistered) unregisterReceiver(screenReceiver)
@@ -167,6 +179,11 @@ class ButtonHookService : AccessibilityService() {
 
     companion object {
         private const val TAG = "ButtonHooks"
+
+        /** The running service, for actions that need it (navigation) from the settings screens. */
+        @Volatile
+        var instance: ButtonHookService? = null
+            private set
 
         /** Never learn these, or the remote could lose the ability to drive the UI. */
         private val NAVIGATION_KEYS = setOf(

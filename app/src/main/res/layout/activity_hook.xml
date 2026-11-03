@@ -42,7 +42,7 @@
             android:inputType="textCapWords" />
 
         <!-- Actions -->
-        <TextView style="@style/SectionHeader" android:text="@string/section_endpoints" />
+        <TextView style="@style/SectionHeader" android:text="@string/section_actions" />
 
         <LinearLayout
             android:id="@+id/block_single"
@@ -69,6 +69,12 @@
                     android:hint="@string/name_hint"
                     android:inputType="textCapSentences" />
 
+                <Button
+                    android:id="@+id/type_single"
+                    style="@style/FlatButton"
+                    android:layout_width="200dp"
+                    android:layout_marginEnd="12dp" />
+
                 <EditText
                     android:id="@+id/url_single"
                     style="@style/Field"
@@ -78,6 +84,14 @@
                     android:inputType="textUri" />
 
                 <Button
+                    android:id="@+id/target_single"
+                    style="@style/FlatButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:gravity="start|center_vertical"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/test_single"
                     style="@style/FlatButton"
                     android:layout_marginStart="12dp"
@@ -85,6 +99,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/request_single"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -131,6 +146,12 @@
                     android:hint="@string/name_hint"
                     android:inputType="textCapSentences" />
 
+                <Button
+                    android:id="@+id/type_double"
+                    style="@style/FlatButton"
+                    android:layout_width="200dp"
+                    android:layout_marginEnd="12dp" />
+
                 <EditText
                     android:id="@+id/url_double"
                     style="@style/Field"
@@ -140,6 +161,14 @@
                     android:inputType="textUri" />
 
                 <Button
+                    android:id="@+id/target_double"
+                    style="@style/FlatButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:gravity="start|center_vertical"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/test_double"
                     style="@style/FlatButton"
                     android:layout_marginStart="12dp"
@@ -147,6 +176,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/request_double"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -193,6 +223,12 @@
                     android:hint="@string/name_hint"
                     android:inputType="textCapSentences" />
 
+                <Button
+                    android:id="@+id/type_hold"
+                    style="@style/FlatButton"
+                    android:layout_width="200dp"
+                    android:layout_marginEnd="12dp" />
+
                 <EditText
                     android:id="@+id/url_hold"
                     style="@style/Field"
@@ -202,6 +238,14 @@
                     android:inputType="textUri" />
 
                 <Button
+                    android:id="@+id/target_hold"
+                    style="@style/FlatButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:gravity="start|center_vertical"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/test_hold"
                     style="@style/FlatButton"
                     android:layout_marginStart="12dp"
@@ -209,6 +253,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/request_hold"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -231,6 +276,7 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/headers_label"
             style="@style/Label"
             android:layout_marginTop="16dp"
             android:text="@string/label_headers" />

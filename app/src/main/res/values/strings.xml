@@ -2,11 +2,11 @@
 <resources>
     <string name="app_name">Button Hooks</string>
     <string name="service_label">Button Hooks</string>
-    <string name="service_description">Catches a remote button you choose, stops its normal action, and sends an HTTP request for a single press, double press or hold.</string>
+    <string name="service_description">Catches remote buttons you choose, stops their normal action, and runs your own action for a single press, double press or hold: a webhook, navigation, a media key, or opening an app.</string>
 
     <string name="section_service">Service</string>
     <string name="section_button">Button</string>
-    <string name="section_endpoints">Endpoints</string>
+    <string name="section_actions">Actions</string>
     <string name="section_timing">Timing</string>
 
     <string name="section_buttons">Buttons</string>
@@ -29,8 +29,11 @@
     <string name="label_headers">Headers (every gesture of this button, one per line)</string>
     <string name="headers_hint">Authorization: Bearer your-long-lived-token</string>
     <string name="method_label">Method: %1$s</string>
+    <string name="type_label">Action: %1$s</string>
+    <string name="choose">Choose…</string>
+    <string name="disabled_summary">Disabled (does nothing)</string>
     <string name="label_timeout_ms">Request timeout (ms)</string>
-    <string name="endpoint_help">Leave a URL empty to ignore that gesture. The name is what the on-screen badge shows. {gesture} and {key} in a URL or body are replaced with the gesture and keycode. A body starting with { or [ is sent as JSON unless a Content-Type header says otherwise. With no double press URL, single presses fire immediately.</string>
+    <string name="endpoint_help">A hooked button never does its normal action. Set every gesture to Nothing (or leave them empty) to just disable it. Navigation, media keys and Open app run on the Shield; Webhook sends an HTTP request, where {gesture} and {key} in the URL or body are replaced with the gesture and keycode, and a body starting with { or [ is sent as JSON unless a Content-Type header says otherwise. The name is what the on-screen badge shows. If double press does nothing, single presses fire immediately.</string>
     <string name="section_feedback">Feedback</string>
     <string name="label_double_ms">Double press window (ms)</string>
     <string name="label_hold_ms">Hold after (ms)</string>

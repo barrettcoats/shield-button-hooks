@@ -1,6 +1,16 @@
 # Button Hooks
 
-An Android TV app that takes over remote buttons you choose. It stops a button's normal action and sends an HTTP request for a **single press**, **double press** or **hold**. It's made for Home Assistant, but any URL works. A new install starts with no buttons; use **Add button** and press the one you want.
+An Android TV app that takes over remote buttons you choose. It stops a button's normal action, and gives each **single press**, **double press** and **hold** its own action:
+
+- **Webhook**: an HTTP request (made for Home Assistant, but any URL works)
+- **Navigation**: Back, Home, Recent apps, Notifications, Quick settings, D-pad (D-pad needs Android 13+)
+- **Media key**: play/pause, play, pause, stop, next, previous, fast-forward, rewind
+- **Open app**: any installed app
+- **Nothing**: just disable the button
+
+A new install starts with no buttons; use **Add button** and press the one you want.
+
+Android doesn't let apps inject arbitrary key presses, so the button can't be remapped to letters, F-keys or a key for one specific app. The list above is what an accessibility service can do.
 
 It was built for the NVIDIA Shield TV's Netflix button on LineageOS 22.2. Nothing in it is Shield- or Google-specific.
 
@@ -44,6 +54,7 @@ How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be
   - **hold** fires while the button is still down, after *hold ms* (default 500)
   - **double** fires on the second press, if it comes within *double ms* (default 300) of the first release
   - **single** fires *double ms* after release, or immediately if no double press URL is set
+- `LocalActions` runs the non-webhook actions: `performGlobalAction` for navigation, `AudioManager.dispatchMediaKeyEvent` for media keys (they go to the app that last played media), and the app's TV launch intent for Open app.
 - `HttpSender` sends the request on a background thread and logs the method, URL and result (never headers) to logcat under the tag `ButtonHooks`.
 - `SettingsActivity` is a D-pad-friendly screen for the three URLs, the timing, learning a new button, and test buttons.
 
@@ -86,6 +97,7 @@ To log every key the service sees: `adb shell setprop log.tag.ButtonHooks DEBUG`
 - [x] Hook one button, swallow its default action
 - [x] Single / double / hold → HTTP request, with editable endpoints
 - [x] Learn a different button from the remote
+- [x] Remap: navigation, media keys, open app, or disable
 - [ ] **Overlay menu**: a press opens an on-screen list (an accessibility overlay, `TYPE_ACCESSIBILITY_OVERLAY`, so no extra permission). You pick a device or scene with the D-pad, and it sends that item's request
 - [ ] Menu items loaded from Home Assistant (entities or scripts via the REST API with a long-lived token), not just typed in by hand
 - [x] Several hooked buttons, each with its own gestures (for example the microphone button)
