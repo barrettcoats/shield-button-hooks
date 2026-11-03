@@ -15,7 +15,7 @@ LineageOS for TV loads `org.lineageos.lineageparts.atv.KeyHandler`, which runs *
 
 The app reads that array at runtime (`LineageKeyHandler`) and switches to DOWN-only detection automatically. Buttons that aren't on the list, such as the microphone button, get all three gestures.
 
-A fix is drafted in `upstream/` and was tested on a Shield TV Pro 2019: it passes both events through when the key's app isn't installed. Once the app sees an UP from a listed key, it remembers that and turns hold back on for that key.
+A fix is in review at LineageOS as [change 511786](https://review.lineageos.org/c/LineageOS/android_packages_apps_LineageParts/+/511786), tested on a Shield TV Pro 2019: it passes both events through when the key's app isn't installed. On builds with that fix, Button Hooks notices the first UP from a listed key, remembers it, and turns hold back on for that key.
 
 ## TV power over the remote's IR (Shield Remote 2019)
 
@@ -95,4 +95,4 @@ NVIDIA and SHIELD are trademarks of NVIDIA Corporation. This project isn't affil
 
 ## License
 
-MIT, see `LICENSE`. The exception is `upstream/`, which holds copies of LineageOS's `KeyHandler.java` and a patch to it; those are LineageOS code under the Apache License 2.0.
+MIT, see `LICENSE`.
