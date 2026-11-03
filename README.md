@@ -79,6 +79,20 @@ To log every key the service sees: `adb shell setprop log.tag.ButtonHooks DEBUG`
 - [x] Learn a different button from the remote
 - [ ] **Overlay menu**: a press opens an on-screen list (an accessibility overlay, `TYPE_ACCESSIBILITY_OVERLAY`, so no extra permission). You pick a device or scene with the D-pad, and it sends that item's request
 - [ ] Menu items loaded from Home Assistant (entities or scripts via the REST API with a long-lived token), not just typed in by hand
-- [ ] Several hooked buttons, each with its own gestures (for example the microphone button)
+- [x] Several hooked buttons, each with its own gestures (for example the microphone button)
+- [x] TV power over the Shield remote's IR on LineageOS
+- [ ] Write IR codes to the remote (for remotes never set up on NVIDIA's firmware)
 - [ ] POST with a JSON body, and custom headers
 - [ ] Settings export/import, and an F-Droid release
+
+## Status
+
+I built this for my own Shield and TV, and I'm sharing it as-is. Issues and pull requests are welcome, but there's no promise of support or fixes.
+
+This was built with help from an AI assistant (Claude), which traced the LineageOS key handling, worked out the remote's IR protocol, and drafted most of the code. I reviewed it and tested everything on my own hardware.
+
+NVIDIA and SHIELD are trademarks of NVIDIA Corporation. This project isn't affiliated with or endorsed by NVIDIA, and it contains no NVIDIA code. The remote's protocol was worked out for interoperability, and the TV codes used are LG's public NEC codes.
+
+## License
+
+MIT, see `LICENSE`. The exception is `upstream/`, which holds copies of LineageOS's `KeyHandler.java` and a patch to it; those are LineageOS code under the Apache License 2.0.
