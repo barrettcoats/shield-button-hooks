@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Button Hooks</string>
     <string name="service_label">Button Hooks</string>
-    <string name="service_description">Catches a remote button you choose, stops its normal action, and sends an HTTP GET for a single press, double press or hold.</string>
+    <string name="service_description">Catches a remote button you choose, stops its normal action, and sends an HTTP request for a single press, double press or hold.</string>
 
     <string name="section_service">Service</string>
     <string name="section_button">Button</string>
@@ -25,7 +25,12 @@
     <string name="label_hold">Hold</string>
     <string name="name_hint">Name, e.g. Bedroom lights</string>
     <string name="url_hint">http://homeassistant.local:8123/api/webhook/…</string>
-    <string name="endpoint_help">Leave a URL empty to ignore that gesture. The name is what the on-screen badge shows. {gesture} and {key} in a URL are replaced with the gesture and keycode. With no double press URL, single presses fire immediately.</string>
+    <string name="body_hint">Body for POST/PUT, e.g. {\"entity_id\": \"light.den\"}</string>
+    <string name="label_headers">Headers (every gesture of this button, one per line)</string>
+    <string name="headers_hint">Authorization: Bearer your-long-lived-token</string>
+    <string name="method_label">Method: %1$s</string>
+    <string name="label_timeout_ms">Request timeout (ms)</string>
+    <string name="endpoint_help">Leave a URL empty to ignore that gesture. The name is what the on-screen badge shows. {gesture} and {key} in a URL or body are replaced with the gesture and keycode. A body starting with { or [ is sent as JSON unless a Content-Type header says otherwise. With no double press URL, single presses fire immediately.</string>
     <string name="section_feedback">Feedback</string>
     <string name="label_double_ms">Double press window (ms)</string>
     <string name="label_hold_ms">Hold after (ms)</string>

@@ -16,7 +16,7 @@ import java.util.Date
 
 /**
  * Filters key events system-wide. Every hooked button is swallowed so its normal action never
- * runs, and its gestures are turned into HTTP GETs.
+ * runs, and its gestures are turned into HTTP requests.
  */
 class ButtonHookService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -135,15 +135,13 @@ class ButtonHookService : AccessibilityService() {
 
     private fun fire(keyCode: Int, gesture: Gesture) {
         val hook = hooks[keyCode] ?: return
-        val template = hook.action(gesture).url
         val name = hook.actionName(gesture)
-        if (template.isEmpty()) {
+        if (hook.action(gesture).url.isEmpty()) {
             Log.i(TAG, "${hook.title} ${gesture.id}: no URL set")
             return
         }
-        val url = HttpSender.expand(template, gesture, keyCode)
         if (prefs.badgeMode == BadgeMode.ALL) overlay.show("$name…")
-        HttpSender.get(url) { result ->
+        HttpSender.send(hook, gesture, prefs.timeoutMs) { result ->
             val time = DateFormat.getTimeInstance(DateFormat.MEDIUM).format(Date())
             prefs.lastResult = "$time  ${hook.title} · $name: $result"
             val ok = result.startsWith("HTTP 2")

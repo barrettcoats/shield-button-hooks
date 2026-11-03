@@ -53,6 +53,10 @@ class Prefs(context: Context) {
         get() = raw.getLong(HOLD_MS, 500L)
         set(value) = raw.edit().putLong(HOLD_MS, value).apply()
 
+    var timeoutMs: Int
+        get() = raw.getInt(TIMEOUT_MS, 4000)
+        set(value) = raw.edit().putInt(TIMEOUT_MS, value).apply()
+
     var badgeMode: BadgeMode
         get() = BadgeMode.entries.find { it.id == raw.getString(BADGE_MODE, null) } ?: BadgeMode.ALL
         set(value) = raw.edit().putString(BADGE_MODE, value.id).apply()
@@ -77,10 +81,17 @@ class Prefs(context: Context) {
         set(value) = raw.edit().putString(LAST_RESULT, value).apply()
 
     /**
-     * Version 0.1 stored a single button as flat keys. Turn that into the first hook, or start with
-     * the Shield remote's Netflix button (BUTTON_4 on LineageOS) on a fresh install.
+     * Version 0.1 stored a single button as flat keys; turn that into the first hook. A fresh
+     * install starts with no buttons.
      */
     private fun migrateSingleHook(): List<Hook> {
+        val hasOldSettings = raw.contains(OLD_KEY_CODE) ||
+            Gesture.entries.any { raw.contains("name_" + it.id) || raw.contains("url_" + it.id) }
+        if (!hasOldSettings) {
+            raw.edit().putString(HOOKS, "[]").apply()
+            return emptyList()
+        }
+        // 0.1 defaulted to the Shield remote's Netflix button (BUTTON_4 on LineageOS).
         val keyCode = raw.getInt(OLD_KEY_CODE, KeyEvent.KEYCODE_BUTTON_4)
         val actions = Gesture.entries.associateWith { gesture ->
             Action(
@@ -106,6 +117,7 @@ class Prefs(context: Context) {
         const val DOUBLE_MS = "double_ms"
         const val HOLD_MS = "hold_ms"
         const val BADGE_MODE = "badge_mode"
+        const val TIMEOUT_MS = "timeout_ms"
         const val LAST_RESULT = "last_result"
         const val TV_POWER = "tv_power"
         const val TV_POWER_REMOTE = "tv_power_remote"

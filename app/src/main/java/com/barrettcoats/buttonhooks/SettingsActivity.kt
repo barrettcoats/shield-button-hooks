@@ -27,6 +27,7 @@ class SettingsActivity : Activity() {
     private lateinit var lastResult: TextView
     private lateinit var doubleMs: EditText
     private lateinit var holdMs: EditText
+    private lateinit var timeoutMs: EditText
     private lateinit var badgeMode: Button
     private lateinit var tvPower: Button
     private lateinit var tvPowerRemote: Button
@@ -57,6 +58,7 @@ class SettingsActivity : Activity() {
         lastResult = findViewById(R.id.last_result)
         doubleMs = findViewById(R.id.double_ms)
         holdMs = findViewById(R.id.hold_ms)
+        timeoutMs = findViewById(R.id.timeout_ms)
         badgeMode = findViewById(R.id.badge_mode)
         tvPower = findViewById(R.id.tv_power)
         tvPowerRemote = findViewById(R.id.tv_power_remote)
@@ -109,6 +111,7 @@ class SettingsActivity : Activity() {
 
         doubleMs.setText(prefs.doubleMs.toString())
         holdMs.setText(prefs.holdMs.toString())
+        timeoutMs.setText(prefs.timeoutMs.toString())
         showBadgeMode()
 
         findViewById<Button>(R.id.open_accessibility).setOnClickListener {
@@ -149,6 +152,7 @@ class SettingsActivity : Activity() {
     private fun save() {
         doubleMs.text.toString().toLongOrNull()?.let { prefs.doubleMs = it.coerceIn(100, 2000) }
         holdMs.text.toString().toLongOrNull()?.let { prefs.holdMs = it.coerceIn(200, 5000) }
+        timeoutMs.text.toString().toIntOrNull()?.let { prefs.timeoutMs = it.coerceIn(500, 30000) }
     }
 
     /** The service clears the learning flag once it has a key; open that key's editor. */
@@ -172,8 +176,9 @@ class SettingsActivity : Activity() {
     }
 
     private fun showHooks() {
-        hooksList.removeAllViews()
+        // Read first: on a fresh install, reading saves an empty list, which calls showHooks again.
         val hooks = prefs.hooks
+        hooksList.removeAllViews()
         if (hooks.isEmpty()) {
             hooksList.addView(TextView(this).apply {
                 setText(R.string.no_hooks)

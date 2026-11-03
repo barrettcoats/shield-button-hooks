@@ -1,6 +1,6 @@
 # Button Hooks
 
-An Android TV app that takes over one remote button. It stops the button's normal action and sends an HTTP GET for a **single press**, **double press** or **hold**. It's made for Home Assistant webhooks, but any URL works.
+An Android TV app that takes over remote buttons you choose. It stops a button's normal action and sends an HTTP request for a **single press**, **double press** or **hold**. It's made for Home Assistant, but any URL works. A new install starts with no buttons; use **Add button** and press the one you want.
 
 It was built for the NVIDIA Shield TV's Netflix button on LineageOS 22.2. Nothing in it is Shield- or Google-specific.
 
@@ -23,7 +23,7 @@ On NVIDIA's firmware, the Shield turns the TV on and off by IR: when the Shield 
 
 Requirements and limits:
 
-- **The 2019 Shield Remote** (Bluetooth name `NVIDIA SHIELD Remote`). The 2017 remote uses a different link and isn't supported.
+- **The 2019 Shield Remote**. It's found by its name (anything containing "SHIELD Remote"). Failing that, up to four other paired Bluetooth LE devices are checked for NVIDIA's IR service, and whichever has it is remembered. The 2017 remote uses a different link and isn't supported.
 - **The power code has to be on the remote already.** Set it up on NVIDIA's firmware **before** flashing LineageOS: Settings → Display & Sound → Power control (and Volume control → IR). The codes are stored on the remote, so they survive the flash and re-pairing. Writing new codes from LineageOS isn't implemented yet (the protocol is worked out in `shield-remote-ir/NOTES.md`).
 - With the toggle setting, if the TV and Shield get out of step, fix it once with the TV's own button. The on/off codes can't get out of step.
 - **Several remotes**: only one may fire, because two would toggle the TV twice. By default it uses the first connected remote. With two paired, use **Fires from** to pick the one kept with this TV, identified by the end of its Bluetooth address (Settings → Remotes & accessories shows it). Android doesn't tell apps which Bluetooth remote sent a key (the hidden `InputDevice.getBluetoothAddress()` is blocked for apps), so it can't follow whichever remote you last pressed.
@@ -44,12 +44,21 @@ How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be
   - **hold** fires while the button is still down, after *hold ms* (default 500)
   - **double** fires on the second press, if it comes within *double ms* (default 300) of the first release
   - **single** fires *double ms* after release, or immediately if no double press URL is set
-- `HttpSender` runs the GET on a background thread with a 4 s timeout, and logs to logcat under the tag `ButtonHooks`.
+- `HttpSender` sends the request on a background thread and logs the method, URL and result (never headers) to logcat under the tag `ButtonHooks`.
 - `SettingsActivity` is a D-pad-friendly screen for the three URLs, the timing, learning a new button, and test buttons.
 
-`{gesture}` (`single`/`double`/`hold`) and `{key}` (the Android keycode) in a URL are substituted. That lets one webhook handle everything:
+`{gesture}` (`single`/`double`/`hold`) and `{key}` (the Android keycode) in a URL or body are substituted. That lets one webhook handle everything:
 
     http://homeassistant.local:8123/api/webhook/shield-netflix?gesture={gesture}
+
+Each gesture also has a **method** (GET, POST, PUT, DELETE) and an optional **body**. A body starting with `{` or `[` is sent as JSON unless you set a `Content-Type` header. Each button has a **headers** box, one `Name: value` per line, sent with all of its gestures. For example, to run a Home Assistant script through the REST API with a long-lived access token:
+
+    URL:     http://homeassistant.local:8123/api/services/script/turn_on
+    Method:  POST
+    Body:    {"entity_id": "script.movie_time"}
+    Headers: Authorization: Bearer <long-lived token>
+
+Headers are never written to the log. The request timeout (default 4 s) is under *Timing*.
 
 Measured on the Shield remote: a tap is 75–150 ms down, the gap in a double press is about 75 ms, and nothing auto-repeats while the button is held.
 
@@ -75,14 +84,14 @@ To log every key the service sees: `adb shell setprop log.tag.ButtonHooks DEBUG`
 ## Roadmap
 
 - [x] Hook one button, swallow its default action
-- [x] Single / double / hold → GET, with editable endpoints
+- [x] Single / double / hold → HTTP request, with editable endpoints
 - [x] Learn a different button from the remote
 - [ ] **Overlay menu**: a press opens an on-screen list (an accessibility overlay, `TYPE_ACCESSIBILITY_OVERLAY`, so no extra permission). You pick a device or scene with the D-pad, and it sends that item's request
 - [ ] Menu items loaded from Home Assistant (entities or scripts via the REST API with a long-lived token), not just typed in by hand
 - [x] Several hooked buttons, each with its own gestures (for example the microphone button)
 - [x] TV power over the Shield remote's IR on LineageOS
 - [ ] Write IR codes to the remote (for remotes never set up on NVIDIA's firmware)
-- [ ] POST with a JSON body, and custom headers
+- [x] POST/PUT/DELETE with a body, and custom headers
 - [ ] Settings export/import, and an F-Droid release
 
 ## Status
