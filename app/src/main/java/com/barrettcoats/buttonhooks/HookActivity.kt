@@ -16,6 +16,9 @@ class HookActivity : Activity() {
     private var keyCode = -1
     private var removed = false
 
+    /** LineageOS takes this key's release, so the hold gesture is hidden and can't fire. */
+    private var downOnly = false
+
     private lateinit var label: EditText
     private lateinit var lastResult: TextView
     private lateinit var headers: EditText
@@ -120,11 +123,12 @@ class HookActivity : Activity() {
         headers.setText(hook.headers)
         Gesture.entries.forEach { rows.getValue(it).load(hook.action(it)) }
 
-        val downOnly = keyCode in LineageKeyHandler.upSwallowedKeys(this)
+        downOnly = keyCode in LineageKeyHandler.upSwallowedKeys(this)
         val keyLine = "${hook.keyName} ($keyCode)"
         findViewById<TextView>(R.id.hook_key).text =
             if (downOnly) "$keyLine\n${getString(R.string.no_hold_note)}" else keyLine
         findViewById<View>(R.id.block_hold).visibility = if (downOnly) View.GONE else View.VISIBLE
+        headersVisibility()
 
         findViewById<Button>(R.id.save).setOnClickListener {
             save()
@@ -151,10 +155,12 @@ class HookActivity : Activity() {
         super.onPause()
     }
 
-    /** Headers only matter for webhooks; hide them when no gesture is one. */
+    /** Headers only matter for webhooks; hide them when no gesture that can fire is one. */
     private fun headersVisibility() {
         if (!::rows.isInitialized || !::headers.isInitialized) return
-        val any = rows.values.any { it.type == ActionType.WEBHOOK }
+        val any = rows.any { (gesture, row) ->
+            row.type == ActionType.WEBHOOK && !(downOnly && gesture == Gesture.HOLD)
+        }
         val v = if (any) View.VISIBLE else View.GONE
         headers.visibility = v
         findViewById<View>(R.id.headers_label).visibility = v
