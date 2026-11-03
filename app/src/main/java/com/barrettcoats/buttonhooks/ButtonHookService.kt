@@ -1,6 +1,10 @@
 package com.barrettcoats.buttonhooks
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
@@ -26,13 +30,40 @@ class ButtonHookService : AccessibilityService() {
     private var swallowUpFor: Int? = null
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == Prefs.HOOKS) reloadHooks()
+        when (key) {
+            Prefs.HOOKS -> reloadHooks()
+            Prefs.TV_POWER -> updateTvPower()
+        }
+    }
+
+    /** Sleep/wake of the Shield toggles the TV through the remote's stored IR power code. */
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            Log.i(TAG, "${intent.action}: toggling TV power")
+            RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote)
+        }
+    }
+    private var screenReceiverRegistered = false
+
+    private fun updateTvPower() {
+        val want = prefs.tvPower
+        if (want && !screenReceiverRegistered) {
+            registerReceiver(screenReceiver, IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+            })
+            screenReceiverRegistered = true
+        } else if (!want && screenReceiverRegistered) {
+            unregisterReceiver(screenReceiver)
+            screenReceiverRegistered = false
+        }
     }
 
     override fun onServiceConnected() {
         prefs = Prefs(this)
         overlay = FeedbackOverlay(this)
         reloadHooks()
+        updateTvPower()
         prefs.raw.registerOnSharedPreferenceChangeListener(prefListener)
     }
 
@@ -123,6 +154,7 @@ class ButtonHookService : AccessibilityService() {
     override fun onDestroy() {
         if (::prefs.isInitialized) prefs.raw.unregisterOnSharedPreferenceChangeListener(prefListener)
         if (::overlay.isInitialized) overlay.hide()
+        if (screenReceiverRegistered) unregisterReceiver(screenReceiver)
         super.onDestroy()
     }
 

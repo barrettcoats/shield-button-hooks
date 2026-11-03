@@ -29,6 +29,13 @@
     <string name="section_feedback">Feedback</string>
     <string name="label_double_ms">Double press window (ms)</string>
     <string name="label_hold_ms">Hold after (ms)</string>
+    <string name="section_tv">TV power</string>
+    <string name="tv_power_on">TV power: follows the Shield</string>
+    <string name="tv_power_off">TV power: off</string>
+    <string name="tv_power_remote_any">Fires from: any connected remote</string>
+    <string name="tv_power_remote_one">Fires from: %1$s</string>
+    <string name="tv_power_test">Toggle TV power now</string>
+    <string name="tv_power_help">Uses the TV power code stored on the Shield Remote (set up on NVIDIA\'s firmware) and toggles it when the Shield sleeps or wakes. If the TV gets out of step, fix it once with the TV\'s own button. With two remotes paired, pick the one kept with this TV, because only one remote may fire.</string>
     <string name="badges_all">Badges: every press</string>
     <string name="badges_errors">Badges: errors only</string>
     <string name="badges_off">Badges: off</string>

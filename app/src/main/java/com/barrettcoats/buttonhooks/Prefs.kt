@@ -57,6 +57,16 @@ class Prefs(context: Context) {
         get() = BadgeMode.entries.find { it.id == raw.getString(BADGE_MODE, null) } ?: BadgeMode.ALL
         set(value) = raw.edit().putString(BADGE_MODE, value.id).apply()
 
+    /** Fire the remote's stored TV power code when the Shield sleeps or wakes. */
+    var tvPower: Boolean
+        get() = raw.getBoolean(TV_POWER, false)
+        set(value) = raw.edit().putBoolean(TV_POWER, value).apply()
+
+    /** Bluetooth address of the remote that fires TV power, or null for any connected one. */
+    var tvPowerRemote: String?
+        get() = raw.getString(TV_POWER_REMOTE, null)
+        set(value) = raw.edit().putString(TV_POWER_REMOTE, value).apply()
+
     var lastResult: String
         get() = raw.getString(LAST_RESULT, "") ?: ""
         set(value) = raw.edit().putString(LAST_RESULT, value).apply()
@@ -92,6 +102,8 @@ class Prefs(context: Context) {
         const val HOLD_MS = "hold_ms"
         const val BADGE_MODE = "badge_mode"
         const val LAST_RESULT = "last_result"
+        const val TV_POWER = "tv_power"
+        const val TV_POWER_REMOTE = "tv_power_remote"
         private const val OLD_KEY_CODE = "key_code"
     }
 }

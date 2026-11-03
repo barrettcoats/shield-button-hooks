@@ -118,6 +118,32 @@
                 android:inputType="number" />
         </LinearLayout>
 
+        <!-- TV power -->
+        <TextView style="@style/SectionHeader" android:text="@string/section_tv" />
+
+        <Button
+            android:id="@+id/tv_power"
+            style="@style/FlatButton"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/tv_power_remote"
+            style="@style/FlatButton"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/tv_power_test"
+            style="@style/FlatButton"
+            android:layout_marginTop="8dp"
+            android:text="@string/tv_power_test" />
+
+        <TextView
+            style="@style/Label"
+            android:layout_width="match_parent"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/mid"
+            android:text="@string/tv_power_help" />
+
         <!-- Feedback -->
         <TextView style="@style/SectionHeader" android:text="@string/section_feedback" />
 

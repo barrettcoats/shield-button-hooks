@@ -28,6 +28,8 @@ class SettingsActivity : Activity() {
     private lateinit var doubleMs: EditText
     private lateinit var holdMs: EditText
     private lateinit var badgeMode: Button
+    private lateinit var tvPower: Button
+    private lateinit var tvPowerRemote: Button
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
@@ -56,6 +58,36 @@ class SettingsActivity : Activity() {
         doubleMs = findViewById(R.id.double_ms)
         holdMs = findViewById(R.id.hold_ms)
         badgeMode = findViewById(R.id.badge_mode)
+        tvPower = findViewById(R.id.tv_power)
+        tvPowerRemote = findViewById(R.id.tv_power_remote)
+        showTvPower()
+
+        // Cycles: any connected remote → each paired remote → back to any.
+        tvPowerRemote.setOnClickListener {
+            val addresses = listOf<String?>(null) + RemoteIr.pairedRemotes(this).map { it.address }
+            val next = (addresses.indexOf(prefs.tvPowerRemote) + 1) % addresses.size
+            prefs.tvPowerRemote = addresses[next]
+            showTvPower()
+        }
+
+        tvPower.setOnClickListener {
+            if (!prefs.tvPower && !RemoteIr.hasPermission(this)) {
+                requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_BT)
+                return@setOnClickListener
+            }
+            prefs.tvPower = !prefs.tvPower
+            showTvPower()
+        }
+
+        findViewById<Button>(R.id.tv_power_test).setOnClickListener {
+            if (!RemoteIr.hasPermission(this)) {
+                requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_BT)
+                return@setOnClickListener
+            }
+            RemoteIr.emit(this, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote) { result ->
+                Toast.makeText(this, "TV power: $result", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         doubleMs.setText(prefs.doubleMs.toString())
         holdMs.setText(prefs.holdMs.toString())
@@ -169,6 +201,20 @@ class SettingsActivity : Activity() {
         return "${hook.keyName} (${hook.keyCode})   " + parts.joinToString("   ")
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode == REQUEST_BT && RemoteIr.hasPermission(this)) {
+            prefs.tvPower = true
+            showTvPower()
+        }
+    }
+
+    private fun showTvPower() {
+        tvPower.setText(if (prefs.tvPower) R.string.tv_power_on else R.string.tv_power_off)
+        val chosen = RemoteIr.pairedRemotes(this).firstOrNull { it.address == prefs.tvPowerRemote }
+        tvPowerRemote.text = if (chosen == null) getString(R.string.tv_power_remote_any)
+        else getString(R.string.tv_power_remote_one, RemoteIr.label(chosen))
+    }
+
     private fun showBadgeMode() {
         badgeMode.setText(
             when (prefs.badgeMode) {
@@ -186,6 +232,10 @@ class SettingsActivity : Activity() {
             ?.any { ComponentName.unflattenFromString(it) == component } == true
         serviceStatus.text = if (enabled) "Service is ON" else "Service is OFF: enable Button Hooks in accessibility settings"
         serviceStatus.setTextColor(getColor(if (enabled) R.color.text else R.color.accent))
+    }
+
+    companion object {
+        private const val REQUEST_BT = 1
     }
 
     private fun dp(value: Int) = TypedValue.applyDimension(
