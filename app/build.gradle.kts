@@ -1,7 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+// Release signing comes from a properties file kept outside the repo (storeFile, storePassword,
+// keyAlias, keyPassword). Without it, `assembleRelease` still works but the APK is unsigned.
+val signingProps = Properties().apply {
+    val path = System.getenv("BUTTON_HOOKS_SIGNING")
+        ?: "${System.getProperty("user.home")}/.config/button-hooks/keystore.properties"
+    file(path).takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
+val appVersion = "0.2.0"
 
 android {
     namespace = "com.barrettcoats.buttonhooks"
@@ -11,13 +23,25 @@ android {
         applicationId = "com.barrettcoats.buttonhooks"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = appVersion
+    }
+
+    signingConfigs {
+        if (signingProps.isNotEmpty()) {
+            create("release") {
+                storeFile = file(signingProps.getProperty("storeFile"))
+                storePassword = signingProps.getProperty("storePassword")
+                keyAlias = signingProps.getProperty("keyAlias")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -29,4 +53,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+base {
+    archivesName.set("button-hooks-$appVersion")
 }

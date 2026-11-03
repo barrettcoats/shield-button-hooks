@@ -73,19 +73,31 @@ Headers are never written to the log. The request timeout (default 4 s) is under
 
 Measured on the Shield remote: a tap is 75–150 ms down, the gap in a double press is about 75 ms, and nothing auto-repeats while the button is held.
 
+## Install
+
+Download the APK from [Releases](https://github.com/barrettcoats/shield-button-hooks/releases) and sideload it, for example with `adb install button-hooks-0.2.0.apk`. Then follow the permission steps below.
+
+Releases are signed with this certificate (SHA-256). Check it with `apksigner verify --print-certs`:
+
+    A5:D5:D0:C0:67:07:60:69:15:2F:BE:BF:30:88:EC:33:03:80:B1:2D:2F:9E:8A:10:EE:E8:AC:69:BC:CA:A3:40
+
+A build you make yourself is signed with your own key, so Android won't install it over a release (or the other way round) without uninstalling first, which loses the app's settings.
+
 ## Build and install
 
 Requires JDK 17 and an Android SDK with `platforms;android-35` and `build-tools;35.0.0`.
 
     ./gradlew assembleDebug
-    adb install -r app/build/outputs/apk/debug/app-debug.apk
+    adb install -r app/build/outputs/apk/debug/button-hooks-0.2.0-debug.apk
+
+`./gradlew assembleRelease` signs the APK if `~/.config/button-hooks/keystore.properties` exists (or the file named by `BUTTON_HOOKS_SIGNING`), with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Otherwise it writes an unsigned APK.
 
 Permissions: **Internet**, **notifications** (Android 13+ hides toasts from background apps whose notifications are off), **Bluetooth connect** (only for TV power), and the **accessibility service**. No "display over other apps" is needed, now or for the planned overlay.
 
 Android 13+ treats sideloaded apps as having "restricted settings", and refuses to turn on their accessibility service until you allow it. If you change it before then, the setting just reads back as `null`. With adb:
 
     adb shell appops set com.barrettcoats.buttonhooks ACCESS_RESTRICTED_SETTINGS allow
-    adb install -r app/build/outputs/apk/debug/app-debug.apk   # reinstall so accessibility rescans it
+    adb install -r app/build/outputs/apk/debug/button-hooks-0.2.0-debug.apk   # reinstall so accessibility rescans it
     adb shell pm grant com.barrettcoats.buttonhooks android.permission.POST_NOTIFICATIONS
     adb shell settings put secure enabled_accessibility_services com.barrettcoats.buttonhooks/.ButtonHookService
     adb shell settings put secure accessibility_enabled 1
