@@ -140,6 +140,9 @@ class SettingsActivity : Activity() {
         showHooks()
         showLearning()
         lastResult.text = prefs.lastResult
+        // A timing field can end up with focus when the screen opens (seen on LineageOS),
+        // and on a TV the D-pad then only moves the cursor inside it.
+        if (currentFocus == null || currentFocus is EditText) addHook.requestFocus()
     }
 
     override fun onPause() {
@@ -186,27 +189,51 @@ class SettingsActivity : Activity() {
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
                 setPadding(0, dp(12), 0, 0)
             })
-            return
         }
-        hooks.forEach { hook -> hooksList.addView(hookRow(hook)) }
+        val editButtons = hooks.map { hook -> hookRow(hook).also { hooksList.addView(it.view) }.editButton }
+        linkFocus(editButtons)
     }
 
-    private fun hookRow(hook: Hook) = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(12), 0, 0)
+    /**
+     * The Edit buttons sit on the right and Add button on the left, so Android's
+     * nearest-view D-pad search jumps from the last Edit straight to the timing
+     * fields (also on the right) and Add button can't be reached with a remote.
+     * Chain them explicitly: accessibility → each Edit → Add button → timing.
+     */
+    private fun linkFocus(editButtons: List<Button>) {
+        val openAccessibility = findViewById<Button>(R.id.open_accessibility)
+        val chain = listOf<Button>(openAccessibility) + editButtons + addHook
+        chain.zipWithNext { above, below ->
+            above.nextFocusDownId = below.id
+            below.nextFocusUpId = above.id
+        }
+        addHook.nextFocusDownId = doubleMs.id
+        doubleMs.nextFocusUpId = addHook.id
+    }
 
-        addView(TextView(context).apply {
-            text = "${hook.title}\n${summary(hook)}"
-            setTextColor(getColor(R.color.text))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setLineSpacing(dp(4).toFloat(), 1f)
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+    private class HookRow(val view: LinearLayout, val editButton: Button)
 
-        addView(Button(context, null, 0, R.style.FlatButton).apply {
+    private fun hookRow(hook: Hook): HookRow {
+        val edit = Button(this, null, 0, R.style.FlatButton).apply {
+            id = android.view.View.generateViewId()
             setText(R.string.edit)
             setOnClickListener { openHook(hook.keyCode) }
-        })
+        }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, 0)
+
+            addView(TextView(context).apply {
+                text = "${hook.title}\n${summary(hook)}"
+                setTextColor(getColor(R.color.text))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setLineSpacing(dp(4).toFloat(), 1f)
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+            addView(edit)
+        }
+        return HookRow(row, edit)
     }
 
     private fun summary(hook: Hook): String {
