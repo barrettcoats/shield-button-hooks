@@ -38,7 +38,7 @@ Requirements and limits:
 - **The power code has to be on the remote already.** Set it up on NVIDIA's firmware **before** flashing LineageOS: Settings → Display & Sound → Power control (and Volume control → IR). The codes are stored on the remote, so they survive the flash and re-pairing. Writing new codes from LineageOS isn't implemented yet (the protocol is worked out in `shield-remote-ir/NOTES.md`).
 - With the toggle setting, if the TV and Shield get out of step, fix it once with the TV's own button. The on/off codes can't get out of step.
 - **Several remotes**: only one may fire, because two would toggle the TV twice. By default it uses the first connected remote. With two paired, use **Fires from** to pick the one kept with this TV, identified by the end of its Bluetooth address (Settings → Remotes & accessories shows it). Android doesn't tell apps which Bluetooth remote sent a key (the hidden `InputDevice.getBluetoothAddress()` is blocked for apps), so it can't follow whichever remote you last pressed.
-- Volume isn't involved. If the remote already sends IR volume, lock the Shield's HDMI output at full volume so Bluetooth volume doesn't stack on top: `adb shell settings put system AudioService_DeviceVolumeBehavior_hdmi 1`, then reboot.
+- Volume isn't involved. If the remote already sends IR volume, lock the Shield's HDMI output at full volume so Bluetooth volume doesn't stack on top. See *Volume on LineageOS* below.
 
 Setup on a new Shield, after the steps under *Build and install*:
 
@@ -47,6 +47,24 @@ Setup on a new Shield, after the steps under *Build and install*:
 Then open Button Hooks, set **TV power** to *follows the Shield (on/off codes)*, and try **Test: TV off, then on**. If the TV only turns off and never comes back on, the remote has only a toggle stored: switch to *(toggle code)*.
 
 How it talks to the remote: a vendor GATT service `00001000-b89b-11e5-9912-ba0be0483c18`. 18-byte frames `[command, transactionId, slot, offset, data…]` are written to `…2001`, and the replies arrive as notifications on `…2000`. Command 44 is *emit*, with data[0] = slot (0 = power off, 1 = power toggle, 5 = power on, 2/3 = volume up/down, 11 = mute). See `RemoteIr.kt`.
+
+## Volume on LineageOS
+
+If the remote's volume buttons were set to IR on NVIDIA's firmware, each press is sent **twice** on LineageOS: as IR straight to the TV, and as a Bluetooth `KEY_VOLUMEUP`/`KEY_VOLUMEDOWN` to the Shield. Android then changes its own volume on top of the TV's, and shows its volume slider. On a TV without working HDMI-CEC, the two volumes stack.
+
+The fix is to lock the Shield's HDMI output at full volume, so only the TV's volume changes:
+
+    adb shell settings put system AudioService_DeviceVolumeBehavior_hdmi 1
+    adb reboot
+
+- **It only takes effect after a reboot.** The setting is read when the audio service starts, so until you reboot, `settings get` shows `1` but nothing changes.
+- To check it's active, look for `0x400` (HDMI) in `adb shell dumpsys audio | grep mFullVolumeDevices`. Before the reboot that list might show only `0x40000,0x40001` (HDMI ARC/eARC).
+- To undo: `adb shell settings delete system AudioService_DeviceVolumeBehavior_hdmi`, then reboot.
+- Android's volume slider still pops up on each press, but it no longer changes how loud anything is.
+
+I haven't found a switch for this in LineageOS's TV Settings, and Button Hooks can't set it for you: as far as I know, changing a device's volume behavior (`AudioManager.setDeviceVolumeBehavior`) needs a permission only system apps get, so for now it's done over adb.
+
+**Volume keys can't be hooked.** Android handles them before accessibility services see them: on LineageOS 22.2 (Shield TV 2017, 2019 remote) the service logged every D-pad and OK press but never a volume key, so **Add button** doesn't react to them either. The remote's IR still controls the TV. The remote has no mute button.
 
 ## How it works
 
