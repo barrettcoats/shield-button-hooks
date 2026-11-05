@@ -39,19 +39,53 @@ class ButtonHookService : AccessibilityService() {
     /**
      * Sleep/wake of the Shield turns the TV off/on through the remote's stored IR power codes:
      * the discrete OFF/ON codes three times each, like NVIDIA's firmware, or the toggle once.
+     *
+     * The TV is only turned off when the Shield was put to sleep with the power button. A sleep
+     * from the idle timer, or from HDMI-CEC (a console or other device took over the TV), leaves
+     * the TV alone, so it can't go dark in the middle of something on another input. Waking
+     * always fires ON (harmless if the TV is already on); the toggle fires on wake only if this
+     * app toggled the TV off, since a blind toggle could turn it off instead.
      */
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val on = intent.action == Intent.ACTION_SCREEN_ON
             val toggle = prefs.tvPowerToggle
-            Log.i(TAG, "${intent.action}: TV power ${if (toggle) "toggle" else if (on) "on" else "off"}")
-            when {
-                toggle -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, prefs.tvPowerRemote)
-                on -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_ON, prefs.tvPowerRemote, times = 3)
-                else -> RemoteIr.emit(context, RemoteIr.SLOT_POWER_OFF, prefs.tvPowerRemote, times = 3)
+            val remote = prefs.tvPowerRemote
+            if (on) {
+                when {
+                    !toggle -> {
+                        Log.i(TAG, "${intent.action}: TV power on")
+                        RemoteIr.emit(context, RemoteIr.SLOT_POWER_ON, remote, times = 3)
+                    }
+                    tvTurnedOff -> {
+                        Log.i(TAG, "${intent.action}: TV power toggle (back on)")
+                        RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, remote)
+                    }
+                    else -> Log.i(TAG, "${intent.action}: TV wasn't turned off by us; no toggle")
+                }
+                tvTurnedOff = false
+                return
             }
+            Thread {
+                val reason = SleepReason.last(context)
+                // Unreadable (no DUMP grant): leave the TV alone. A TV left on is a small
+                // annoyance; one switched off in the middle of a game on another input isn't.
+                val fire = reason == SleepReason.POWER_BUTTON
+                main.post {
+                    Log.i(TAG, "${intent.action} (sleep reason: ${reason ?: "unknown"}): " +
+                        if (fire) "TV power ${if (toggle) "toggle" else "off"}" else "leaving the TV alone")
+                    if (fire) {
+                        if (toggle) RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, remote)
+                        else RemoteIr.emit(context, RemoteIr.SLOT_POWER_OFF, remote, times = 3)
+                    }
+                    tvTurnedOff = fire
+                }
+            }.start()
         }
     }
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    /** Whether the last sleep turned the TV off (used to pair the toggle code on wake). */
+    private var tvTurnedOff = false
     private var screenReceiverRegistered = false
 
     private fun updateTvPower() {

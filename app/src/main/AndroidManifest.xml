@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Without it Android 13+ suppresses toasts from the background service. -->
@@ -7,6 +8,10 @@
     <!-- To make the Shield remote fire its stored TV power code (IR) on sleep/wake. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Granted over adb only (pm grant ... android.permission.DUMP): reads why the Shield went
+         to sleep, so only the power button turns the TV off. See SleepReason.kt. -->
+    <uses-permission android:name="android.permission.DUMP"
+        tools:ignore="ProtectedPermissions" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
 

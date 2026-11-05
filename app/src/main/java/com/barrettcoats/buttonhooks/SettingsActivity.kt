@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -266,6 +267,8 @@ class SettingsActivity : Activity() {
         val chosen = RemoteIr.pairedRemotes(this).firstOrNull { it.address == prefs.tvPowerRemote }
         tvPowerRemote.text = if (chosen == null) getString(R.string.tv_power_remote_any)
         else getString(R.string.tv_power_remote_one, RemoteIr.label(chosen))
+        findViewById<View>(R.id.tv_power_grant).visibility =
+            if (prefs.tvPower && !SleepReason.hasPermission(this)) View.VISIBLE else View.GONE
     }
 
     private fun showBadgeMode() {
