@@ -71,6 +71,14 @@ class Prefs(context: Context) {
         get() = raw.getBoolean(TV_POWER_TOGGLE, false)
         set(value) = raw.edit().putBoolean(TV_POWER_TOGGLE, value).apply()
 
+    /**
+     * Turn the TV off on every sleep (sleep timer and HDMI-CEC too). Off by default: then only the
+     * power button turns it off, which needs the DUMP grant (see [SleepReason]).
+     */
+    var tvOffAlways: Boolean
+        get() = raw.getBoolean(TV_OFF_ALWAYS, false)
+        set(value) = raw.edit().putBoolean(TV_OFF_ALWAYS, value).apply()
+
     /** Bluetooth address of the remote that fires TV power, or null for any connected one. */
     var tvPowerRemote: String?
         get() = raw.getString(TV_POWER_REMOTE, null)
@@ -122,6 +130,7 @@ class Prefs(context: Context) {
         const val TV_POWER = "tv_power"
         const val TV_POWER_REMOTE = "tv_power_remote"
         const val TV_POWER_TOGGLE = "tv_power_toggle"
+        const val TV_OFF_ALWAYS = "tv_off_always"
         private const val OLD_KEY_CODE = "key_code"
     }
 }

@@ -87,6 +87,19 @@ class SettingsActivity : Activity() {
             showTvPower()
         }
 
+        // The greyed-out choice stays selectable: it's the safe one (the TV just stays on at sleep
+        // until the grant is in), and on a TV the D-pad can't reach a disabled button to explain it.
+        findViewById<Button>(R.id.tv_off_power).setOnClickListener {
+            prefs.tvOffAlways = false
+            if (!SleepReason.hasPermission(this))
+                Toast.makeText(this, R.string.tv_off_needs_grant_toast, Toast.LENGTH_LONG).show()
+            showTvPower()
+        }
+        findViewById<Button>(R.id.tv_off_always).setOnClickListener {
+            prefs.tvOffAlways = true
+            showTvPower()
+        }
+
         findViewById<Button>(R.id.tv_power_test).setOnClickListener {
             if (!RemoteIr.hasPermission(this)) {
                 requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_BT)
@@ -140,6 +153,7 @@ class SettingsActivity : Activity() {
         showService()
         showHooks()
         showLearning()
+        if (::tvPower.isInitialized) showTvPower()
         lastResult.text = prefs.lastResult
         // A timing field can end up with focus when the screen opens (seen on LineageOS),
         // and on a TV the D-pad then only moves the cursor inside it.
@@ -267,8 +281,26 @@ class SettingsActivity : Activity() {
         val chosen = RemoteIr.pairedRemotes(this).firstOrNull { it.address == prefs.tvPowerRemote }
         tvPowerRemote.text = if (chosen == null) getString(R.string.tv_power_remote_any)
         else getString(R.string.tv_power_remote_one, RemoteIr.label(chosen))
-        findViewById<View>(R.id.tv_power_grant).visibility =
-            if (prefs.tvPower && !SleepReason.hasPermission(this)) View.VISIBLE else View.GONE
+        val granted = SleepReason.hasPermission(this)
+        val always = prefs.tvOffAlways
+        val mark = { selected: Boolean ->
+            getString(if (selected) R.string.tv_off_selected else R.string.tv_off_unselected)
+        }
+        val offPower = findViewById<Button>(R.id.tv_off_power)
+        val offAlways = findViewById<Button>(R.id.tv_off_always)
+        val note = findViewById<TextView>(R.id.tv_off_note)
+        offPower.text = getString(R.string.tv_off_power, mark(!always))
+        offPower.alpha = if (granted) 1f else 0.45f
+        offAlways.text = getString(R.string.tv_off_always, mark(always))
+        val shown = if (prefs.tvPower) View.VISIBLE else View.GONE
+        offPower.visibility = shown
+        offAlways.visibility = shown
+        when {
+            !prefs.tvPower -> note.visibility = View.GONE
+            always -> { note.setText(R.string.tv_off_always_warning); note.visibility = View.VISIBLE }
+            !granted -> { note.setText(R.string.tv_off_power_needs_grant); note.visibility = View.VISIBLE }
+            else -> note.visibility = View.GONE
+        }
     }
 
     private fun showBadgeMode() {

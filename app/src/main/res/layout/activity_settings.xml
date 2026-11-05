@@ -152,6 +152,23 @@
             android:layout_marginTop="8dp" />
 
         <Button
+            android:id="@+id/tv_off_power"
+            style="@style/FlatButton"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/tv_off_always"
+            style="@style/FlatButton"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tv_off_note"
+            style="@style/Label"
+            android:layout_width="match_parent"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/tv_power_test"
             style="@style/FlatButton"
             android:layout_marginTop="8dp"
@@ -163,14 +180,6 @@
             android:layout_marginTop="8dp"
             android:textColor="@color/mid"
             android:text="@string/tv_power_help" />
-
-        <TextView
-            android:id="@+id/tv_power_grant"
-            style="@style/Label"
-            android:layout_width="match_parent"
-            android:layout_marginTop="8dp"
-            android:visibility="gone"
-            android:text="@string/tv_power_grant" />
 
         <!-- Feedback -->
         <TextView style="@style/SectionHeader" android:text="@string/section_feedback" />

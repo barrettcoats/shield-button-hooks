@@ -40,9 +40,10 @@ class ButtonHookService : AccessibilityService() {
      * Sleep/wake of the Shield turns the TV off/on through the remote's stored IR power codes:
      * the discrete OFF/ON codes three times each, like NVIDIA's firmware, or the toggle once.
      *
-     * The TV is only turned off when the Shield was put to sleep with the power button. A sleep
-     * from the idle timer, or from HDMI-CEC (a console or other device took over the TV), leaves
-     * the TV alone, so it can't go dark in the middle of something on another input. Waking
+     * By default the TV is only turned off when the Shield was put to sleep with the power
+     * button. A sleep from the idle timer, or from HDMI-CEC (a console or other device took over
+     * the TV), leaves the TV alone, so it can't go dark in the middle of something on another
+     * input. "TV off: whenever the Shield sleeps" ([Prefs.tvOffAlways]) turns it off every time. Waking
      * always fires ON (harmless if the TV is already on); the toggle fires on wake only if this
      * app toggled the TV off, since a blind toggle could turn it off instead.
      */
@@ -68,9 +69,11 @@ class ButtonHookService : AccessibilityService() {
             }
             Thread {
                 val reason = SleepReason.last(context)
-                // Unreadable (no DUMP grant): leave the TV alone. A TV left on is a small
-                // annoyance; one switched off in the middle of a game on another input isn't.
-                val fire = reason == SleepReason.POWER_BUTTON
+                // "Every sleep" fires regardless. Otherwise only the power button does; an
+                // unreadable reason (no DUMP grant) leaves the TV alone, since a TV left on is a
+                // small annoyance and one switched off in the middle of a game on another input
+                // isn't.
+                val fire = prefs.tvOffAlways || reason == SleepReason.POWER_BUTTON
                 main.post {
                     Log.i(TAG, "${intent.action} (sleep reason: ${reason ?: "unknown"}): " +
                         if (fire) "TV power ${if (toggle) "toggle" else "off"}" else "leaving the TV alone")

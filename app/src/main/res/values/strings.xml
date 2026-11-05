@@ -43,9 +43,15 @@
     <string name="tv_power_off">TV power: off</string>
     <string name="tv_power_remote_any">Fires from: any connected remote</string>
     <string name="tv_power_remote_one">Fires from: %1$s</string>
-    <string name="tv_power_grant">TV off needs a one-time adb grant, so the TV only turns off when you press the remote\'s power button (not on the sleep timer, or when another HDMI device takes over). Until then, waking still turns the TV on, but sleeping leaves it on. Run: adb shell pm grant com.barrettcoats.buttonhooks android.permission.DUMP</string>
+    <string name="tv_off_power">%1$s TV off: only with the power button</string>
+    <string name="tv_off_always">%1$s TV off: whenever the Shield sleeps</string>
+    <string name="tv_off_selected">●</string>
+    <string name="tv_off_unselected">○</string>
+    <string name="tv_off_power_needs_grant">\"Only with the power button\" is greyed out because Button Hooks can\'t yet tell why the Shield fell asleep. Until it can, the TV stays on when the Shield sleeps (waking still turns it on). To allow it, run this once from a computer:\nadb shell pm grant com.barrettcoats.buttonhooks android.permission.DUMP</string>
+    <string name="tv_off_always_warning">This also turns the TV off when the Shield\'s sleep timer runs out, and when HDMI-CEC puts the Shield to sleep because a console or other device took over the TV, even in the middle of a game or film.</string>
+    <string name="tv_off_needs_grant_toast">Selected, but it needs the adb grant first: see the note below</string>
     <string name="tv_power_test">Test: TV off, then on</string>
-    <string name="tv_power_help">Uses the TV power codes stored on the Shield Remote (set up on NVIDIA\'s firmware): putting the Shield to sleep with the power button turns the TV off, and waking it turns the TV on. The sleep timer, or another HDMI device taking over, leaves the TV on. If your remote only has a toggle code, use the toggle setting; if the TV then gets out of step, fix it once with the TV\'s own button. With two remotes paired, pick the one kept with this TV, because only one remote may fire.</string>
+    <string name="tv_power_help">Uses the TV power codes stored on the Shield Remote (set up on NVIDIA\'s firmware): waking the Shield turns the TV on, and \"TV off\" picks when sleeping turns it off. If your remote only has a toggle code, use the toggle setting; if the TV then gets out of step, fix it once with the TV\'s own button. With two remotes paired, pick the one kept with this TV, because only one remote may fire.</string>
     <string name="badges_all">Badges: every press</string>
     <string name="badges_errors">Badges: errors only</string>
     <string name="badges_off">Badges: off</string>

@@ -38,7 +38,7 @@ Requirements and limits:
 - **The power code has to be on the remote already.** Set it up on NVIDIA's firmware **before** flashing LineageOS: Settings → Display & Sound → Power control (and Volume control → IR). The codes are stored on the remote, so they survive the flash and re-pairing. Writing new codes from LineageOS isn't implemented yet (the protocol is worked out in `shield-remote-ir/NOTES.md`).
 - With the toggle setting, if the TV and Shield get out of step, fix it once with the TV's own button. The on/off codes can't get out of step.
 - **Several remotes**: only one may fire, because two would toggle the TV twice. By default it uses the first connected remote. With two paired, use **Fires from** to pick the one kept with this TV, identified by the end of its Bluetooth address (Settings → Remotes & accessories shows it). Android doesn't tell apps which Bluetooth remote sent a key (the hidden `InputDevice.getBluetoothAddress()` is blocked for apps), so it can't follow whichever remote you last pressed.
-- **Only the power button turns the TV off.** If the Shield falls asleep on its sleep timer, or HDMI-CEC puts it to sleep because a console or other device took over the TV, the TV is left alone, so it can't go dark in the middle of a game or film on another input. Button Hooks tells these apart by Android's recorded sleep reason (`mLastSleepReason` in `dumpsys power`), which needs the DUMP permission. Without that grant it never turns the TV off, and only the wake side works. Waking always fires **power on**. That's harmless if the TV is already on, and it's useful where CEC stops waking a TV that has been off for a while (for example, an LG in deep standby).
+- **Only the power button turns the TV off.** If the Shield falls asleep on its sleep timer, or HDMI-CEC puts it to sleep because a console or other device took over the TV, the TV is left alone, so it can't go dark in the middle of a game or film on another input. Button Hooks tells these apart by Android's recorded sleep reason (`mLastSleepReason` in `dumpsys power`), which needs the DUMP permission. Without that grant it never turns the TV off, and only the wake side works; the settings screen greys out **TV off: only with the power button** and shows the command. If the Shield is the TV's only input, you can pick **TV off: whenever the Shield sleeps** instead, which needs no grant, but on a TV shared with a console it can switch the TV off mid-game. Waking always fires **power on**. That's harmless if the TV is already on, and it's useful where CEC stops waking a TV that has been off for a while (for example, an LG in deep standby).
 - Volume isn't involved. If the remote already sends IR volume, lock the Shield's HDMI output at full volume so Bluetooth volume doesn't stack on top. See *Volume on LineageOS* below.
 
 Setup on a new Shield, after the steps under *Build and install*:
@@ -98,7 +98,7 @@ Measured on the Shield remote: a tap is 75–150 ms down, the gap in a double pr
 
 ## Install
 
-Download the APK from [Releases](https://github.com/barrettcoats/shield-button-hooks/releases) and sideload it, for example with `adb install button-hooks-0.3.2.apk`. Then follow the permission steps below.
+Download the APK from [Releases](https://github.com/barrettcoats/shield-button-hooks/releases) and sideload it, for example with `adb install button-hooks-0.3.3.apk`. Then follow the permission steps below.
 
 Releases are signed with this certificate (SHA-256). Check it with `apksigner verify --print-certs`:
 
@@ -111,7 +111,7 @@ A build you make yourself is signed with your own key, so Android won't install 
 Requires JDK 17 and an Android SDK with `platforms;android-35` and `build-tools;35.0.0`.
 
     ./gradlew assembleDebug
-    adb install -r app/build/outputs/apk/debug/button-hooks-0.3.2-debug.apk
+    adb install -r app/build/outputs/apk/debug/button-hooks-0.3.3-debug.apk
 
 `./gradlew assembleRelease` signs the APK if `~/.config/button-hooks/keystore.properties` exists (or the file named by `BUTTON_HOOKS_SIGNING`), with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Otherwise it writes an unsigned APK.
 
@@ -120,7 +120,7 @@ Permissions: **Internet**, **notifications** (Android 13+ hides toasts from back
 Android 13+ treats sideloaded apps as having "restricted settings", and refuses to turn on their accessibility service until you allow it. If you change it before then, the setting just reads back as `null`. With adb:
 
     adb shell appops set com.barrettcoats.buttonhooks ACCESS_RESTRICTED_SETTINGS allow
-    adb install -r app/build/outputs/apk/debug/button-hooks-0.3.2-debug.apk   # reinstall so accessibility rescans it
+    adb install -r app/build/outputs/apk/debug/button-hooks-0.3.3-debug.apk   # reinstall so accessibility rescans it
     adb shell pm grant com.barrettcoats.buttonhooks android.permission.POST_NOTIFICATIONS
     adb shell settings put secure enabled_accessibility_services com.barrettcoats.buttonhooks/.ButtonHookService
     adb shell settings put secure accessibility_enabled 1
