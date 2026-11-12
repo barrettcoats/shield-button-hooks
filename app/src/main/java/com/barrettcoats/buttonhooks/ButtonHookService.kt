@@ -46,35 +46,41 @@ class ButtonHookService : AccessibilityService() {
      * input. "TV off: whenever the Shield sleeps" ([Prefs.tvOffAlways]) turns it off every time. Waking
      * always fires ON (harmless if the TV is already on); the toggle fires on wake only if this
      * app toggled the TV off, since a blind toggle could turn it off instead.
+     *
+     * With "Fires from: any", the codes go out through the remote whose button slept or woke the
+     * Shield ([PressedRemote]), since that's the one pointed at the TV. If that can't be told
+     * (no DUMP grant, or the idle timer or HDMI-CEC did it), the first connected remote is used.
      */
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val on = intent.action == Intent.ACTION_SCREEN_ON
             val toggle = prefs.tvPowerToggle
-            val remote = prefs.tvPowerRemote
-            if (on) {
-                when {
-                    !toggle -> {
-                        Log.i(TAG, "${intent.action}: TV power on")
-                        RemoteIr.emit(context, RemoteIr.SLOT_POWER_ON, remote, times = 3)
-                    }
-                    tvTurnedOff -> {
-                        Log.i(TAG, "${intent.action}: TV power toggle (back on)")
-                        RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, remote)
-                    }
-                    else -> Log.i(TAG, "${intent.action}: TV wasn't turned off by us; no toggle")
-                }
-                tvTurnedOff = false
-                return
-            }
-            Thread {
-                val reason = SleepReason.last(context)
+            val chosen = prefs.tvPowerRemote
+            // One worker, so a quick sleep-then-wake can't post its codes out of order.
+            worker.execute {
+                val remote = chosen ?: PressedRemote.address(context)
                 // "Every sleep" fires regardless. Otherwise only the power button does; an
                 // unreadable reason (no DUMP grant) leaves the TV alone, since a TV left on is a
                 // small annoyance and one switched off in the middle of a game on another input
                 // isn't.
-                val fire = prefs.tvOffAlways || reason == SleepReason.POWER_BUTTON
+                val reason = if (on) null else SleepReason.last(context)
                 main.post {
+                    if (on) {
+                        when {
+                            !toggle -> {
+                                Log.i(TAG, "${intent.action}: TV power on")
+                                RemoteIr.emit(context, RemoteIr.SLOT_POWER_ON, remote, times = 3)
+                            }
+                            tvTurnedOff -> {
+                                Log.i(TAG, "${intent.action}: TV power toggle (back on)")
+                                RemoteIr.emit(context, RemoteIr.SLOT_POWER_TOGGLE, remote)
+                            }
+                            else -> Log.i(TAG, "${intent.action}: TV wasn't turned off by us; no toggle")
+                        }
+                        tvTurnedOff = false
+                        return@post
+                    }
+                    val fire = prefs.tvOffAlways || reason == SleepReason.POWER_BUTTON
                     Log.i(TAG, "${intent.action} (sleep reason: ${reason ?: "unknown"}): " +
                         if (fire) "TV power ${if (toggle) "toggle" else "off"}" else "leaving the TV alone")
                     if (fire) {
@@ -83,10 +89,11 @@ class ButtonHookService : AccessibilityService() {
                     }
                     tvTurnedOff = fire
                 }
-            }.start()
+            }
         }
     }
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
     /** Whether the last sleep turned the TV off (used to pair the toggle code on wake). */
     private var tvTurnedOff = false
     private var screenReceiverRegistered = false

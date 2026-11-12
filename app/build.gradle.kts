@@ -13,7 +13,7 @@ val signingProps = Properties().apply {
     file(path).takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
-val appVersion = "0.3.3"
+val appVersion = "0.3.4"
 
 android {
     namespace = "com.barrettcoats.buttonhooks"
@@ -23,7 +23,7 @@ android {
         applicationId = "com.barrettcoats.buttonhooks"
         minSdk = 28
         targetSdk = 35
-        versionCode = 6
+        versionCode = 7
         versionName = appVersion
     }
 
